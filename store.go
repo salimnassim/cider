@@ -13,6 +13,8 @@ type Storer interface {
 	Set(ctx context.Context, key string, value []byte) (err error)
 	// Deletes keys. Returns the number of deleted keys.
 	Del(ctx context.Context, keys []string) (deleted int, err error)
+	// Checks if keys exist in database. Returns the number of keys found.
+	Exists(ctx context.Context, keys []string) (found int, err error)
 }
 
 type store struct {
@@ -60,4 +62,17 @@ func (s *store) Del(ctx context.Context, keys []string) (int, error) {
 		}
 	}
 	return deletes, nil
+}
+
+func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	found := 0
+	for _, key := range keys {
+		if _, ok := s.db[key]; ok {
+			found++
+		}
+	}
+	return found, nil
 }

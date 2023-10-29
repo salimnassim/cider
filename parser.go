@@ -36,6 +36,12 @@ func ParseCommand(cmd []byte) Operation {
 			Keys:  fields[1:],
 			Value: "",
 		}
+	case "EXISTS":
+		return Operation{
+			Name:  StoreOperation(po),
+			Keys:  fields[1:],
+			Value: "",
+		}
 	default:
 		return Operation{
 			Name:  "",
