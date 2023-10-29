@@ -6,7 +6,6 @@ import (
 )
 
 func TestOperations(t *testing.T) {
-
 	type tc struct {
 		input string
 		want  Operation
