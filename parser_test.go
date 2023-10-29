@@ -30,6 +30,14 @@ func TestOperations(t *testing.T) {
 			},
 		},
 		{
+			input: `SET foo "quoted string with spaces"`,
+			want: Operation{
+				Name:  "SET",
+				Keys:  []string{"foo"},
+				Value: `"quoted string with spaces"`,
+			},
+		},
+		{
 			input: "GET foo",
 			want: Operation{
 				Name:  "GET",
