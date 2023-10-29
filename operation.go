@@ -7,6 +7,7 @@ const (
 	OperationGet    = StoreOperation("GET")
 	OperationDel    = StoreOperation("DEL")
 	OperationExists = StoreOperation("EXISTS")
+	OperationExpire = StoreOperation("EXPIRE")
 )
 
 type Operation struct {

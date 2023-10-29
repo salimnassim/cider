@@ -22,7 +22,7 @@ func ParseCommand(cmd []byte) Operation {
 		return Operation{
 			Name:  StoreOperation(po),
 			Keys:  []string{fields[1]},
-			Value: strings.Join(fields[2:], ""),
+			Value: strings.Join(fields[2:], " "),
 		}
 	case "GET":
 		return Operation{
@@ -41,6 +41,12 @@ func ParseCommand(cmd []byte) Operation {
 			Name:  StoreOperation(po),
 			Keys:  fields[1:],
 			Value: "",
+		}
+	case "EXPIRE":
+		return Operation{
+			Name:  StoreOperation(po),
+			Keys:  []string{fields[1]},
+			Value: fields[2],
 		}
 	default:
 		return Operation{

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -43,6 +44,11 @@ func (s *Session) HandleIn(store Storer) {
 
 		switch op.Name {
 		case OperationSet:
+			if len(op.Value) == 0 {
+				s.out <- []byte("-ERR set value cannot be empty\r\n")
+				continue
+			}
+
 			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value))
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
@@ -51,6 +57,10 @@ func (s *Session) HandleIn(store Storer) {
 			s.out <- []byte("+OK\r\n")
 		case OperationGet:
 			res, err := store.Get(s.ctx, op.Keys[0])
+			if res == nil {
+				s.out <- []byte("_\r\n")
+				continue
+			}
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
 				continue
@@ -70,6 +80,21 @@ func (s *Session) HandleIn(store Storer) {
 				continue
 			}
 			s.out <- []byte(fmt.Sprintf(":%d\r\n", num))
+		case OperationExpire:
+			seconds, err := strconv.ParseInt(op.Value, 10, 64)
+			if err != nil {
+				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				continue
+			}
+			res, err := store.Expire(s.ctx, op.Keys[0], seconds)
+			if err != nil {
+				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				continue
+			}
+			s.out <- []byte(fmt.Sprintf(":%d\r\n", res))
+		default:
+			s.out <- []byte("-ERR unknown command\r\n")
+			continue
 		}
 	}
 }
