@@ -22,6 +22,14 @@ func TestOperations(t *testing.T) {
 			},
 		},
 		{
+			input: "SET foo 1",
+			want: Operation{
+				Name:  "SET",
+				Keys:  []string{"foo"},
+				Value: "1",
+			},
+		},
+		{
 			input: "GET foo",
 			want: Operation{
 				Name:  "GET",
@@ -43,6 +51,14 @@ func TestOperations(t *testing.T) {
 				Name:  "EXISTS",
 				Keys:  []string{"foo", "baz", "quu"},
 				Value: "",
+			},
+		},
+		{
+			input: "EXPIRE foo 500",
+			want: Operation{
+				Name:  "EXPIRE",
+				Keys:  []string{"foo"},
+				Value: "500",
 			},
 		},
 	}

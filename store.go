@@ -4,10 +4,11 @@ import (
 	"context"
 	"errors"
 	"sync"
+	"time"
 )
 
 type Storer interface {
-	/// Gets value by key.
+	// Gets value by key.
 	Get(ctx context.Context, key string) (result []byte, err error)
 	// Sets value by key.
 	Set(ctx context.Context, key string, value []byte) (err error)
@@ -16,7 +17,7 @@ type Storer interface {
 	// Checks if keys exist in database. Returns the number of keys found.
 	Exists(ctx context.Context, keys []string) (found int, err error)
 	// Expires a key after n seconds.
-	Expire(ctx context.Context, key string, seconds int) (result int, err error)
+	Expire(ctx context.Context, key string, seconds int64) (result int, err error)
 }
 
 type store struct {
@@ -79,6 +80,18 @@ func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
 	return found, nil
 }
 
-func (s *store) Expire(ctx context.Context, key string, seconds int) (int, error) {
+func (s *store) Expire(ctx context.Context, key string, seconds int64) (int, error) {
+	num, err := s.Exists(ctx, []string{key})
+	if err != nil {
+		return 0, err
+	}
+	if num == 0 {
+		return 0, err
+	}
 
+	go time.AfterFunc(time.Duration(seconds)*time.Second, func() {
+		s.Del(ctx, []string{key})
+	})
+
+	return 1, nil
 }

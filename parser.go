@@ -42,6 +42,12 @@ func ParseCommand(cmd []byte) Operation {
 			Keys:  fields[1:],
 			Value: "",
 		}
+	case "EXPIRE":
+		return Operation{
+			Name:  StoreOperation(po),
+			Keys:  []string{fields[1]},
+			Value: fields[2],
+		}
 	default:
 		return Operation{
 			Name:  "",
