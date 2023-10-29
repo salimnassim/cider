@@ -92,6 +92,9 @@ func (s *Session) HandleIn(store Storer) {
 				continue
 			}
 			s.out <- []byte(fmt.Sprintf(":%d\r\n", res))
+		default:
+			s.out <- []byte("-ERR unknown command\r\n")
+			continue
 		}
 	}
 }
