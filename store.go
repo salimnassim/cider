@@ -15,6 +15,8 @@ type Storer interface {
 	Del(ctx context.Context, keys []string) (deleted int, err error)
 	// Checks if keys exist in database. Returns the number of keys found.
 	Exists(ctx context.Context, keys []string) (found int, err error)
+	// Expires a key after n seconds.
+	Expire(ctx context.Context, key string, seconds int) (result int, err error)
 }
 
 type store struct {
@@ -65,8 +67,8 @@ func (s *store) Del(ctx context.Context, keys []string) (int, error) {
 }
 
 func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	found := 0
 	for _, key := range keys {
@@ -75,4 +77,8 @@ func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
 		}
 	}
 	return found, nil
+}
+
+func (s *store) Expire(ctx context.Context, key string, seconds int) (int, error) {
+
 }
