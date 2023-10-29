@@ -2,7 +2,10 @@ package cider
 
 import (
 	"bytes"
+	"math/rand"
+	"sync"
 	"testing"
+	"time"
 
 	"context"
 )
@@ -54,4 +57,57 @@ func TestSetDel(t *testing.T) {
 	if deletes != 1 || ok {
 		t.Errorf("number of deletes should be 1 and not %v", deletes)
 	}
+}
+
+func TestSetConcurrency(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	var wg sync.WaitGroup
+	for i := 1; i < 10000; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			keys := []string{"key1", "key2", "key3"}
+			values := []string{"val1", "val2", "val3"}
+
+			key := keys[r.Intn(len(keys))]
+			value := values[r.Intn(len(values))]
+
+			store.Set(ctx, key, []byte(value))
+		}()
+	}
+	wg.Wait()
+}
+
+func TestSetGetConcurrency(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	var wg sync.WaitGroup
+	for i := 1; i < 10000; i++ {
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			keys := []string{"key1", "key2", "key3"}
+			values := []string{"val1", "val2", "val3"}
+
+			key := keys[r.Intn(len(keys))]
+			value := values[r.Intn(len(values))]
+
+			if r.Int()%2 == 0 {
+				store.Set(ctx, key, []byte(value))
+			} else {
+				store.Set(ctx, key, []byte(value))
+			}
+
+		}()
+	}
+	wg.Wait()
 }
