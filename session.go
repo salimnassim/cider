@@ -63,6 +63,13 @@ func (s *Session) HandleIn(store Storer) {
 				continue
 			}
 			s.out <- []byte(fmt.Sprintf(":%d\r\n", num))
+		case OperationExists:
+			num, err := store.Exists(s.ctx, op.Keys)
+			if err != nil {
+				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				continue
+			}
+			s.out <- []byte(fmt.Sprintf(":%d\r\n", num))
 		}
 	}
 }

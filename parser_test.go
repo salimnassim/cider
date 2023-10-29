@@ -37,6 +37,14 @@ func TestOperations(t *testing.T) {
 				Value: "",
 			},
 		},
+		{
+			input: "EXISTS foo baz quu",
+			want: Operation{
+				Name:  "EXISTS",
+				Keys:  []string{"foo", "baz", "quu"},
+				Value: "",
+			},
+		},
 	}
 
 	for _, v := range tcs {
