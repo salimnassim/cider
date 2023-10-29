@@ -40,14 +40,14 @@ func (s *Session) HandleIn(store Storer) {
 	for scanner.Scan() {
 		bytes := scanner.Bytes()
 
-		op := ParseCommand(bytes)
+		op, err := ParseCommand(bytes)
+		if err != nil {
+			s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+			continue
+		}
 
 		switch op.Name {
 		case OperationSet:
-			if len(op.Value) == 0 {
-				s.out <- []byte("-ERR SET value cannot be empty\r\n")
-				continue
-			}
 			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value))
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))

@@ -15,3 +15,12 @@ type Operation struct {
 	Keys  []string
 	Value string
 }
+
+// Shorthand for returning an empty operation in case an error happens.
+func emptyOperation() Operation {
+	return Operation{
+		Name:  "",
+		Keys:  []string{},
+		Value: "",
+	}
+}

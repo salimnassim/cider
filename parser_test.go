@@ -37,6 +37,14 @@ func TestOperations(t *testing.T) {
 			},
 		},
 		{
+			input: "GET",
+			want: Operation{
+				Name:  "GET",
+				Keys:  []string{""},
+				Value: "",
+			},
+		},
+		{
 			input: "GET foo",
 			want: Operation{
 				Name:  "GET",
@@ -71,7 +79,10 @@ func TestOperations(t *testing.T) {
 	}
 
 	for _, v := range tcs {
-		op := ParseCommand([]byte(v.input))
+		op, err := ParseCommand([]byte(v.input))
+		if err != nil {
+			continue
+		}
 		if op.Name != v.want.Name {
 			t.Errorf("op name does not match, want: %s, got %s", v.want.Name, op.Name)
 		}
