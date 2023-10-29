@@ -104,7 +104,7 @@ func TestSetGetConcurrency(t *testing.T) {
 			if r.Int()%2 == 0 {
 				store.Set(ctx, key, []byte(value))
 			} else {
-				store.Set(ctx, key, []byte(value))
+				store.Get(ctx, key)
 			}
 
 		}()
