@@ -45,10 +45,9 @@ func (s *Session) HandleIn(store Storer) {
 		switch op.Name {
 		case OperationSet:
 			if len(op.Value) == 0 {
-				s.out <- []byte("-ERR set value cannot be empty\r\n")
+				s.out <- []byte("-ERR SET value cannot be empty\r\n")
 				continue
 			}
-
 			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value))
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
@@ -56,6 +55,10 @@ func (s *Session) HandleIn(store Storer) {
 			}
 			s.out <- []byte("+OK\r\n")
 		case OperationGet:
+			if len(op.Keys) == 0 {
+				s.out <- []byte("-ERR GET value cannot be empty\r\n")
+				continue
+			}
 			res, err := store.Get(s.ctx, op.Keys[0])
 			if res == nil {
 				s.out <- []byte("_\r\n")
