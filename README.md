@@ -7,4 +7,4 @@ Redis clone that supports a limit subset of commands.
 
 Currently supports the following commands
 
-SET, GET, DEL, EXISTS, EXPIRE
+SET, GET, DEL, EXISTS, EXPIRE, INCR, DECR

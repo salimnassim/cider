@@ -8,6 +8,8 @@ const (
 	OperationDel    = StoreOperation("DEL")
 	OperationExists = StoreOperation("EXISTS")
 	OperationExpire = StoreOperation("EXPIRE")
+	OperationIncr   = StoreOperation("INCR")
+	OperationDecr   = StoreOperation("DECR")
 )
 
 type Operation struct {

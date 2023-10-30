@@ -60,6 +60,24 @@ func ParseCommand(cmd []byte) (Operation, error) {
 			Keys:  []string{fields[1]},
 			Value: fields[2],
 		}, nil
+	case "INCR":
+		if len(fields) < 2 {
+			return emptyOperation(), errors.New("need more parameters (2)")
+		}
+		return Operation{
+			Name:  StoreOperation(po),
+			Keys:  []string{fields[1]},
+			Value: "",
+		}, nil
+	case "DECR":
+		if len(fields) < 2 {
+			return emptyOperation(), errors.New("need more parameters (2)")
+		}
+		return Operation{
+			Name:  StoreOperation(po),
+			Keys:  []string{fields[1]},
+			Value: "",
+		}, nil
 	default:
 		return Operation{
 			Name:  "",
