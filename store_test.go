@@ -24,7 +24,9 @@ func TestSetGet(t *testing.T) {
 	ctx := context.Background()
 	store := NewStore()
 
-	err := store.Set(ctx, "key", []byte("value"))
+	test := []byte("value")
+
+	err := store.Set(ctx, "key", test)
 	if err != nil {
 		t.Error(err)
 	}
@@ -34,8 +36,8 @@ func TestSetGet(t *testing.T) {
 		t.Error(err)
 	}
 
-	if !bytes.Equal(val, []byte("value")) {
-		t.Errorf("bytes are not equal for %v and %v", val, []byte("value"))
+	if !bytes.Equal(val, test) {
+		t.Errorf("bytes are not equal for %v and %v", val, test)
 	}
 }
 
