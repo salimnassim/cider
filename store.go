@@ -3,6 +3,8 @@ package cider
 import (
 	"context"
 	"errors"
+	"fmt"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -18,6 +20,10 @@ type Storer interface {
 	Exists(ctx context.Context, keys []string) (found int, err error)
 	// Expires a key after n seconds.
 	Expire(ctx context.Context, key string, seconds int64) (result int, err error)
+	// Increments a key.
+	Incr(ctx context.Context, key string) (err error)
+	// Decrements a key.
+	Decr(ctx context.Context, key string) (err error)
 }
 
 type store struct {
@@ -94,4 +100,40 @@ func (s *store) Expire(ctx context.Context, key string, seconds int64) (int, err
 	})
 
 	return 1, nil
+}
+
+func (s *store) Incr(ctx context.Context, key string) error {
+	val, err := s.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	// todo: there must be a better way to do this, shifting?
+	number, err := strconv.ParseInt(string(val), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	number = number + 1
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)))
+
+	return nil
+}
+
+func (s *store) Decr(ctx context.Context, key string) error {
+	val, err := s.Get(ctx, key)
+	if err != nil {
+		return err
+	}
+
+	// todo: there must be a better way to do this, shifting?
+	number, err := strconv.ParseInt(string(val), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	number = number - 1
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)))
+
+	return nil
 }

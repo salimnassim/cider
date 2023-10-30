@@ -3,6 +3,7 @@ package cider
 import (
 	"bytes"
 	"math/rand"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -112,4 +113,60 @@ func TestSetGetConcurrency(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestIncr(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	key := "test1"
+	value := "100"
+
+	err := store.Set(ctx, key, []byte(value))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = store.Incr(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	v, err := store.Get(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if slices.Compare([]byte{49, 48, 49}, v) != 0 {
+		t.Errorf("want: %v, got: %v", []byte{49, 48, 49}, v)
+	}
+
+}
+
+func TestDecr(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	key := "test1"
+	value := "100"
+
+	err := store.Set(ctx, key, []byte(value))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = store.Decr(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	v, err := store.Get(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if slices.Compare([]byte{57, 57}, v) != 0 {
+		t.Errorf("want: %v, got: %v", []byte{57, 57}, v)
+	}
+
 }
