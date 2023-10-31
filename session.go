@@ -91,7 +91,7 @@ func (s *Session) HandleIn(store Storer) {
 			}
 			res, err := store.Expire(s.ctx, op.Keys[0], seconds)
 			if err != nil {
-				// todo: make error readablew
+				// todo: make error readable
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
 				continue
 			}
@@ -99,7 +99,7 @@ func (s *Session) HandleIn(store Storer) {
 		case OperationIncr:
 			err := store.Incr(s.ctx, op.Keys[0])
 			if err != nil {
-				// todo: make error readablew
+				// todo: make error readable
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
 				continue
 			}

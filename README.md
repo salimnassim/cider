@@ -1,5 +1,5 @@
 # cider
-Redis clone that supports a limit subset of commands.
+Redis clone that supports a limited subset of commands.
 
 ---
 
