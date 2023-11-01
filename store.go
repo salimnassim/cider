@@ -11,15 +11,15 @@ import (
 
 type Storer interface {
 	// Gets value by key.
-	Get(ctx context.Context, key string) (result []byte, err error)
+	Get(ctx context.Context, key string) (value []byte, ttl int64, err error)
 	// Sets value by key.
-	Set(ctx context.Context, key string, value []byte) (err error)
+	Set(ctx context.Context, key string, value []byte, ttl int64) (err error)
 	// Deletes keys. Returns the number of deleted keys.
 	Del(ctx context.Context, keys []string) (deleted int, err error)
 	// Checks if keys exist in database. Returns the number of keys found.
 	Exists(ctx context.Context, keys []string) (found int, err error)
 	// Expires a key after n seconds.
-	Expire(ctx context.Context, key string, seconds int64) (result int, err error)
+	Expire(ctx context.Context, key string, ttl int64) (result int, err error)
 	// Increments a key.
 	Incr(ctx context.Context, key string) (err error)
 	// Decrements a key.
@@ -28,33 +28,64 @@ type Storer interface {
 
 type store struct {
 	mu *sync.RWMutex
-	db map[string][]byte
+	db map[string]*item
 }
 
 func NewStore() *store {
 	return &store{
 		mu: &sync.RWMutex{},
-		db: make(map[string][]byte),
+		db: make(map[string]*item),
 	}
 }
 
-func (s *store) Get(ctx context.Context, key string) ([]byte, error) {
+type item struct {
+	mu    *sync.RWMutex
+	value []byte
+	ttl   int64
+}
+
+func (item *item) set(value []byte, ttl int64) {
+	item.mu.Lock()
+	defer item.mu.Unlock()
+
+	item.value = value
+	item.ttl = ttl
+}
+
+func (item *item) get() (value []byte, ttl int64) {
+	item.mu.RLock()
+	defer item.mu.RUnlock()
+
+	return item.value, item.ttl
+}
+
+func NewItem(value []byte, ttl int64) *item {
+	return &item{
+		mu:    &sync.RWMutex{},
+		value: value,
+		ttl:   ttl,
+	}
+}
+
+func (s *store) Get(ctx context.Context, key string) ([]byte, int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	val, ok := s.db[key]
+	item, ok := s.db[key]
 	if !ok {
-		return nil, errors.New("key not found")
+		return nil, 0, errors.New("key not found")
 	}
 
-	return val, nil
+	value, ttl := item.get()
+
+	return value, ttl, nil
 }
 
-func (s *store) Set(ctx context.Context, key string, value []byte) error {
+func (s *store) Set(ctx context.Context, key string, value []byte, ttl int64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	s.db[key] = value
+	s.db[key] = NewItem(value, ttl)
 
 	return nil
 }
@@ -103,7 +134,7 @@ func (s *store) Expire(ctx context.Context, key string, seconds int64) (int, err
 }
 
 func (s *store) Incr(ctx context.Context, key string) error {
-	val, err := s.Get(ctx, key)
+	val, _, err := s.Get(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -115,13 +146,13 @@ func (s *store) Incr(ctx context.Context, key string) error {
 	}
 
 	number = number + 1
-	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)))
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), 0)
 
 	return nil
 }
 
 func (s *store) Decr(ctx context.Context, key string) error {
-	val, err := s.Get(ctx, key)
+	val, _, err := s.Get(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -133,7 +164,7 @@ func (s *store) Decr(ctx context.Context, key string) error {
 	}
 
 	number = number - 1
-	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)))
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), 0)
 
 	return nil
 }

@@ -48,7 +48,7 @@ func (s *Session) HandleIn(store Storer) {
 
 		switch op.Name {
 		case OperationSet:
-			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value))
+			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value), 0)
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
 				continue
@@ -59,16 +59,17 @@ func (s *Session) HandleIn(store Storer) {
 				s.out <- []byte("-ERR GET value cannot be empty\r\n")
 				continue
 			}
-			res, err := store.Get(s.ctx, op.Keys[0])
-			if res == nil {
+			value, _, err := store.Get(s.ctx, op.Keys[0])
+			if err != nil && err.Error() == "key not found" {
 				s.out <- []byte("_\r\n")
 				continue
 			}
+
 			if err != nil {
 				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
 				continue
 			}
-			s.out <- []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(res), res))
+			s.out <- []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(value), value))
 		case OperationDel:
 			num, err := store.Del(s.ctx, op.Keys)
 			if err != nil {
