@@ -15,7 +15,7 @@ func TestGet(t *testing.T) {
 	ctx := context.Background()
 	store := NewStore()
 
-	_, err := store.Get(ctx, "notexist")
+	_, _, err := store.Get(ctx, "notexist")
 	if err == nil {
 		t.Error(err)
 	}
@@ -27,12 +27,12 @@ func TestSetGet(t *testing.T) {
 
 	test := []byte("value")
 
-	err := store.Set(ctx, "key", test)
+	err := store.Set(ctx, "key", test, 0)
 	if err != nil {
 		t.Error(err)
 	}
 
-	val, err := store.Get(ctx, "key")
+	val, _, err := store.Get(ctx, "key")
 	if err != nil {
 		t.Error(err)
 	}
@@ -46,7 +46,7 @@ func TestSetDel(t *testing.T) {
 	ctx := context.Background()
 	store := NewStore()
 
-	err := store.Set(ctx, "key", []byte("value"))
+	err := store.Set(ctx, "key", []byte("value"), 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,7 +80,7 @@ func TestSetConcurrency(t *testing.T) {
 			key := keys[r.Intn(len(keys))]
 			value := values[r.Intn(len(values))]
 
-			store.Set(ctx, key, []byte(value))
+			store.Set(ctx, key, []byte(value), 0)
 		}()
 	}
 	wg.Wait()
@@ -105,7 +105,7 @@ func TestSetGetConcurrency(t *testing.T) {
 			value := values[r.Intn(len(values))]
 
 			if r.Int()%2 == 0 {
-				store.Set(ctx, key, []byte(value))
+				store.Set(ctx, key, []byte(value), 0)
 			} else {
 				store.Get(ctx, key)
 			}
@@ -122,7 +122,7 @@ func TestIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value))
+	err := store.Set(ctx, key, []byte(value), 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -132,7 +132,7 @@ func TestIncr(t *testing.T) {
 		t.Error(err)
 	}
 
-	v, err := store.Get(ctx, key)
+	v, _, err := store.Get(ctx, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -140,7 +140,6 @@ func TestIncr(t *testing.T) {
 	if slices.Compare([]byte{49, 48, 49}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{49, 48, 49}, v)
 	}
-
 }
 
 func TestIncrIncr(t *testing.T) {
@@ -150,7 +149,7 @@ func TestIncrIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value))
+	err := store.Set(ctx, key, []byte(value), 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -165,7 +164,7 @@ func TestIncrIncr(t *testing.T) {
 		t.Error(err)
 	}
 
-	v, err := store.Get(ctx, key)
+	v, _, err := store.Get(ctx, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -173,7 +172,6 @@ func TestIncrIncr(t *testing.T) {
 	if slices.Compare([]byte{49, 48, 50}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{49, 48, 50}, v)
 	}
-
 }
 
 func TestDecr(t *testing.T) {
@@ -183,7 +181,7 @@ func TestDecr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value))
+	err := store.Set(ctx, key, []byte(value), 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -193,7 +191,7 @@ func TestDecr(t *testing.T) {
 		t.Error(err)
 	}
 
-	v, err := store.Get(ctx, key)
+	v, _, err := store.Get(ctx, key)
 	if err != nil {
 		t.Error(err)
 	}
@@ -201,5 +199,27 @@ func TestDecr(t *testing.T) {
 	if slices.Compare([]byte{57, 57}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{57, 57}, v)
 	}
+}
 
+func TestTTL(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	key := "test1"
+	value := "test"
+	now := time.Now().Unix()
+
+	err := store.Set(ctx, key, []byte(value), now)
+	if err != nil {
+		t.Error(err)
+	}
+
+	ttl, err := store.TTL(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ttl != now {
+		t.Errorf("want: %v, got %v", now, ttl)
+	}
 }
