@@ -15,15 +15,17 @@ type Storer interface {
 	// Sets value by key.
 	Set(ctx context.Context, key string, value []byte, ttl int64) (err error)
 	// Deletes keys. Returns the number of deleted keys.
-	Del(ctx context.Context, keys []string) (deleted int, err error)
+	Del(ctx context.Context, keys []string) (deleted int64, err error)
 	// Checks if keys exist in database. Returns the number of keys found.
-	Exists(ctx context.Context, keys []string) (found int, err error)
+	Exists(ctx context.Context, keys []string) (found int64, err error)
 	// Expires a key after n seconds.
-	Expire(ctx context.Context, key string, ttl int64) (result int, err error)
+	Expire(ctx context.Context, key string, ttl int64) (result int64, err error)
 	// Increments a key.
 	Incr(ctx context.Context, key string) (err error)
 	// Decrements a key.
 	Decr(ctx context.Context, key string) (err error)
+	// Gets the TTL of a key. -2 if it does not exist or -1 if key exists but no TTL is set.
+	TTL(ctx context.Context, key string) (result int64, err error)
 }
 
 type store struct {
@@ -44,14 +46,21 @@ type item struct {
 	ttl   int64
 }
 
-func (item *item) set(value []byte, ttl int64) {
+func (item *item) setValue(value []byte) {
 	item.mu.Lock()
 	defer item.mu.Unlock()
 
 	item.value = value
+}
+
+func (item *item) setTTL(ttl int64) {
+	item.mu.Lock()
+	defer item.mu.Unlock()
+
 	item.ttl = ttl
 }
 
+// Returns value and ttl as copies.
 func (item *item) get() (value []byte, ttl int64) {
 	item.mu.RLock()
 	defer item.mu.RUnlock()
@@ -90,7 +99,7 @@ func (s *store) Set(ctx context.Context, key string, value []byte, ttl int64) er
 	return nil
 }
 
-func (s *store) Del(ctx context.Context, keys []string) (int, error) {
+func (s *store) Del(ctx context.Context, keys []string) (int64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -101,10 +110,10 @@ func (s *store) Del(ctx context.Context, keys []string) (int, error) {
 			deletes++
 		}
 	}
-	return deletes, nil
+	return int64(deletes), nil
 }
 
-func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
+func (s *store) Exists(ctx context.Context, keys []string) (int64, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -114,10 +123,10 @@ func (s *store) Exists(ctx context.Context, keys []string) (int, error) {
 			found++
 		}
 	}
-	return found, nil
+	return int64(found), nil
 }
 
-func (s *store) Expire(ctx context.Context, key string, seconds int64) (int, error) {
+func (s *store) Expire(ctx context.Context, key string, seconds int64) (int64, error) {
 	num, err := s.Exists(ctx, []string{key})
 	if err != nil {
 		return 0, err
@@ -167,4 +176,18 @@ func (s *store) Decr(ctx context.Context, key string) error {
 	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), 0)
 
 	return nil
+}
+
+func (s *store) TTL(ctx context.Context, key string) (int64, error) {
+	_, ttl, err := s.Get(ctx, key)
+	if err != nil && err.Error() == "key not found" {
+		return -2, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if ttl == 0 {
+		return -1, nil
+	}
+	return ttl, nil
 }
