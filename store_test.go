@@ -140,7 +140,6 @@ func TestIncr(t *testing.T) {
 	if slices.Compare([]byte{49, 48, 49}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{49, 48, 49}, v)
 	}
-
 }
 
 func TestIncrIncr(t *testing.T) {
@@ -173,7 +172,6 @@ func TestIncrIncr(t *testing.T) {
 	if slices.Compare([]byte{49, 48, 50}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{49, 48, 50}, v)
 	}
-
 }
 
 func TestDecr(t *testing.T) {
@@ -201,5 +199,27 @@ func TestDecr(t *testing.T) {
 	if slices.Compare([]byte{57, 57}, v) != 0 {
 		t.Errorf("want: %v, got: %v", []byte{57, 57}, v)
 	}
+}
 
+func TestTTL(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	key := "test1"
+	value := "test"
+	now := time.Now().Unix()
+
+	err := store.Set(ctx, key, []byte(value), now)
+	if err != nil {
+		t.Error(err)
+	}
+
+	ttl, err := store.TTL(ctx, key)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ttl != now {
+		t.Errorf("want: %v, got %v", now, ttl)
+	}
 }
