@@ -8,7 +8,7 @@ import (
 )
 
 func TestOk(t *testing.T) {
-	want := []byte("+OK")
+	want := []byte("+OK\r\n")
 	res := replyOK()
 	if slices.Compare(res, want) != 0 {
 		t.Errorf("want: %v, got %v", want, res)
@@ -16,7 +16,7 @@ func TestOk(t *testing.T) {
 }
 
 func TestError(t *testing.T) {
-	want := []byte("-ERR test")
+	want := []byte("-ERR test\r\n")
 	err := errors.New("test")
 	res := replyError(
 		err,
@@ -25,6 +25,15 @@ func TestError(t *testing.T) {
 		t.Errorf("want: %v, got %v", want, res)
 	}
 }
+
+func TestNil(t *testing.T) {
+	want := []byte("_\r\n")
+	res := replyNil()
+	if slices.Compare(res, want) != 0 {
+		t.Errorf("want: %v, got %v", want, res)
+	}
+}
+
 func TestString(t *testing.T) {
 	want := []byte(fmt.Sprintf("$%d\r\n%s\r\n", 3, "foo"))
 	res := replyString([]byte("foo"))
