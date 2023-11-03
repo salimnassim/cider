@@ -3,7 +3,7 @@ package cider
 import (
 	"bufio"
 	"context"
-	"fmt"
+	"errors"
 	"io"
 	"net"
 	"strconv"
@@ -42,7 +42,7 @@ func (s *Session) HandleIn(store Storer) {
 
 		op, err := ParseCommand(bytes)
 		if err != nil {
-			s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+			s.out <- replyError(err)
 			continue
 		}
 
@@ -50,72 +50,71 @@ func (s *Session) HandleIn(store Storer) {
 		case OperationSet:
 			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value), 0)
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
 			s.out <- []byte("+OK\r\n")
 		case OperationGet:
 			if len(op.Keys) == 0 {
-				s.out <- []byte("-ERR GET value cannot be empty\r\n")
+				s.out <- replyError(errors.New("value cannot be empty"))
 				continue
 			}
 			value, _, err := store.Get(s.ctx, op.Keys[0])
 			if err != nil && err.Error() == "key not found" {
-				s.out <- []byte("_\r\n")
+				s.out <- replyNil()
 				continue
 			}
-
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte(fmt.Sprintf("$%d\r\n%s\r\n", len(value), value))
+			s.out <- replyString(value)
 		case OperationDel:
 			num, err := store.Del(s.ctx, op.Keys)
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte(fmt.Sprintf(":%d\r\n", num))
+			s.out <- replyInteger(num)
 		case OperationExists:
 			num, err := store.Exists(s.ctx, op.Keys)
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte(fmt.Sprintf(":%d\r\n", num))
+			s.out <- replyInteger(num)
 		case OperationExpire:
 			seconds, err := strconv.ParseInt(op.Value, 10, 64)
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
 			res, err := store.Expire(s.ctx, op.Keys[0], seconds)
 			if err != nil {
 				// todo: make error readable
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte(fmt.Sprintf(":%d\r\n", res))
+			s.out <- replyInteger(res)
 		case OperationIncr:
 			err := store.Incr(s.ctx, op.Keys[0])
 			if err != nil {
 				// todo: make error readable
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte("+OK\r\n")
+			s.out <- replyOK()
 			continue
 		case OperationDecr:
 			err := store.Decr(s.ctx, op.Keys[0])
 			if err != nil {
-				s.out <- []byte(fmt.Sprintf("-ERR %s\r\n", err))
+				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte("+OK\r\n")
+			s.out <- replyOK()
 			continue
 		default:
-			s.out <- []byte("-ERR unknown command\r\n")
+			s.out <- replyError(errors.New("unknown command"))
 			continue
 		}
 	}
