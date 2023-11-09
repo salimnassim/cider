@@ -46,20 +46,20 @@ func (s *Session) HandleIn(store Storer) {
 			continue
 		}
 
-		switch op.Name {
+		switch op.name {
 		case OperationSet:
-			err := store.Set(s.ctx, op.Keys[0], []byte(op.Value), 0)
+			err := store.Set(s.ctx, op.keys[0], []byte(op.value), 0)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
-			s.out <- []byte("+OK\r\n")
+			s.out <- replyOK()
 		case OperationGet:
-			if len(op.Keys) == 0 {
+			if len(op.keys) == 0 {
 				s.out <- replyError(errors.New("value cannot be empty"))
 				continue
 			}
-			value, _, err := store.Get(s.ctx, op.Keys[0])
+			value, _, err := store.Get(s.ctx, op.keys[0])
 			if err != nil && err.Error() == "key not found" {
 				s.out <- replyNil()
 				continue
@@ -70,26 +70,26 @@ func (s *Session) HandleIn(store Storer) {
 			}
 			s.out <- replyString(value)
 		case OperationDel:
-			num, err := store.Del(s.ctx, op.Keys)
+			num, err := store.Del(s.ctx, op.keys)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyInteger(num)
 		case OperationExists:
-			num, err := store.Exists(s.ctx, op.Keys)
+			num, err := store.Exists(s.ctx, op.keys)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyInteger(num)
 		case OperationExpire:
-			seconds, err := strconv.ParseInt(op.Value, 10, 64)
+			seconds, err := strconv.ParseInt(op.value, 10, 64)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
-			res, err := store.Expire(s.ctx, op.Keys[0], seconds)
+			res, err := store.Expire(s.ctx, op.keys[0], seconds)
 			if err != nil {
 				// todo: make error readable
 				s.out <- replyError(err)
@@ -97,7 +97,7 @@ func (s *Session) HandleIn(store Storer) {
 			}
 			s.out <- replyInteger(res)
 		case OperationIncr:
-			err := store.Incr(s.ctx, op.Keys[0])
+			err := store.Incr(s.ctx, op.keys[0])
 			if err != nil {
 				// todo: make error readable
 				s.out <- replyError(err)
@@ -106,7 +106,7 @@ func (s *Session) HandleIn(store Storer) {
 			s.out <- replyOK()
 			continue
 		case OperationDecr:
-			err := store.Decr(s.ctx, op.Keys[0])
+			err := store.Decr(s.ctx, op.keys[0])
 			if err != nil {
 				s.out <- replyError(err)
 				continue
