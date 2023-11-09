@@ -34,9 +34,25 @@ type opDel struct {
 	keys []string
 }
 
+type opExists struct {
+	keys []string
+}
+
 type opExpire struct {
 	key string
 	ttl int64
+	nx  bool
+	xx  bool
+	gt  bool
+	lt  bool
+}
+
+type opIncr struct {
+	key string
+}
+
+type opDecr struct {
+	key string
 }
 
 type operation struct {

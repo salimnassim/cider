@@ -15,7 +15,15 @@ func TestParserAny(t *testing.T) {
 
 	tcs := []tc{
 		{
-			input: "SET key value another arg XX GET EX 5",
+			input: "SET key value XX",
+			want: opSet{
+				key:   "key",
+				value: []byte("value"),
+				xx:    true,
+			},
+		},
+		{
+			input: "SET key value another arg XX GET EX 42",
 			want: opSet{
 				key:     "key",
 				value:   []byte("value another arg"),
@@ -23,6 +31,7 @@ func TestParserAny(t *testing.T) {
 				xx:      true,
 				get:     true,
 				keepttl: false,
+				ex:      42,
 			},
 		},
 		{
@@ -45,6 +54,7 @@ func TestParserAny(t *testing.T) {
 				xx:      true,
 				get:     true,
 				keepttl: false,
+				ex:      5,
 			},
 		},
 		{
@@ -56,6 +66,7 @@ func TestParserAny(t *testing.T) {
 				xx:      false,
 				get:     false,
 				keepttl: true,
+				ex:      5,
 			},
 		},
 	}
@@ -91,7 +102,6 @@ func TestParserAny(t *testing.T) {
 }
 
 func TestParserAnyGet(t *testing.T) {
-
 	type tc struct {
 		input string
 		want  opGet
@@ -191,6 +201,222 @@ func TestParserAnyErrors(t *testing.T) {
 			if err.Error() != tc.wantError.Error() {
 				t.Errorf("got: %s, want %s (input: %s)", err, tc.wantError, tc.input)
 			}
+		}
+	}
+}
+
+func TestParserAnyDel(t *testing.T) {
+	type tc struct {
+		input string
+		want  opDel
+	}
+
+	tcs := []tc{
+		{
+			input: "DEL one two three",
+			want: opDel{
+				keys: []string{"one", "two", "three"},
+			},
+		},
+		{
+			input: "DEL one",
+			want: opDel{
+				keys: []string{"one"},
+			},
+		},
+		{
+			input: "DEL one two three 12345",
+			want: opDel{
+				keys: []string{"one", "two", "three", "12345"},
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		v, err := ParseCommandAny([]byte(tc.input))
+		if err != nil {
+			t.Error(err)
+		}
+		op := v.(opDel)
+
+		if slices.Compare(op.keys, tc.want.keys) != 0 {
+			t.Errorf("got: %v, want: %v", op.keys, tc.want.keys)
+		}
+	}
+}
+
+func TestParserAnyExpire(t *testing.T) {
+	type tc struct {
+		input string
+		want  opExpire
+	}
+
+	tcs := []tc{
+		{
+			input: "EXPIRE foo 42 NX",
+			want: opExpire{
+				key: "foo",
+				ttl: 42,
+				nx:  true,
+			},
+		},
+		{
+			input: "EXPIRE foo 42",
+			want: opExpire{
+				key: "foo",
+				ttl: 42,
+			},
+		},
+		{
+			input: "EXPIRE foo 101 GT",
+			want: opExpire{
+				key: "foo",
+				ttl: 101,
+				gt:  true,
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		v, err := ParseCommandAny([]byte(tc.input))
+		if err != nil {
+			t.Error(err)
+		}
+		op := v.(opExpire)
+
+		if op.key != tc.want.key {
+			t.Errorf("got: %v, want: %v", op.key, tc.want.key)
+		}
+
+		if op.ttl != tc.want.ttl {
+			t.Errorf("got: %v, want: %v", op.ttl, tc.want.ttl)
+		}
+
+		if op.gt != tc.want.gt {
+			t.Errorf("got: %v, want: %v", op.gt, tc.want.gt)
+		}
+
+		if op.lt != tc.want.lt {
+			t.Errorf("got: %v, want: %v", op.lt, tc.want.lt)
+		}
+
+		if op.nx != tc.want.nx {
+			t.Errorf("got: %v, want: %v", op.nx, tc.want.nx)
+		}
+
+		if op.xx != tc.want.xx {
+			t.Errorf("got: %v, want: %v", op.nx, tc.want.nx)
+		}
+
+	}
+}
+
+func TestParserAnyExists(t *testing.T) {
+	type tc struct {
+		input string
+		want  opExists
+	}
+
+	tcs := []tc{
+		{
+			input: "EXISTS one two three",
+			want: opExists{
+				keys: []string{"one", "two", "three"},
+			},
+		},
+		{
+			input: "EXISTS one",
+			want: opExists{
+				keys: []string{"one"},
+			},
+		},
+		{
+			input: "EXISTS one two three 12345",
+			want: opExists{
+				keys: []string{"one", "two", "three", "12345"},
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		v, err := ParseCommandAny([]byte(tc.input))
+		if err != nil {
+			t.Error(err)
+		}
+		op := v.(opExists)
+
+		if slices.Compare(op.keys, tc.want.keys) != 0 {
+			t.Errorf("got: %v, want: %v", op.keys, tc.want.keys)
+		}
+	}
+}
+
+func TestParerAnyIncr(t *testing.T) {
+	type tc struct {
+		input string
+		want  opIncr
+	}
+
+	tcs := []tc{
+		{
+			input: "INCR foo",
+			want: opIncr{
+				key: "foo",
+			},
+		},
+		{
+			input: "INCR baz",
+			want: opIncr{
+				key: "baz",
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		v, err := ParseCommandAny([]byte(tc.input))
+		if err != nil {
+			t.Error(err)
+		}
+
+		op := v.(opIncr)
+
+		if op.key != tc.want.key {
+			t.Errorf("got %v, want %v", op.key, tc.want.key)
+		}
+	}
+}
+
+func TestParerAnyDecr(t *testing.T) {
+	type tc struct {
+		input string
+		want  opDecr
+	}
+
+	tcs := []tc{
+		{
+			input: "DECR foo",
+			want: opDecr{
+				key: "foo",
+			},
+		},
+		{
+			input: "DECR baz",
+			want: opDecr{
+				key: "baz",
+			},
+		},
+	}
+
+	for _, tc := range tcs {
+		v, err := ParseCommandAny([]byte(tc.input))
+		if err != nil {
+			t.Error(err)
+		}
+
+		op := v.(opDecr)
+
+		if op.key != tc.want.key {
+			t.Errorf("got %v, want %v", op.key, tc.want.key)
 		}
 	}
 }

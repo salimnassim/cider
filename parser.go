@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func ParseCommandAny(command []byte) (any, error) {
@@ -15,10 +14,11 @@ func ParseCommandAny(command []byte) (any, error) {
 
 	operation := strings.ToUpper(fields[0])
 	switch operation {
+	// https://redis.io/commands/set/
 	case "SET":
 		// need at least key and value
 		if len(fields) < 3 {
-			return nil, errors.New("not enough arguments")
+			return nil, errors.New("not enough arguments for SET")
 		}
 
 		// cutoff point to read the value only excluding ex/exat number
@@ -31,30 +31,30 @@ func ParseCommandAny(command []byte) (any, error) {
 				op.key = fields[1]
 				continue
 			}
-			if i > 3 && v == "NX" {
+			if i > 2 && v == "NX" {
 				if op.xx {
 					return nil, errors.New("XX already set in this command")
 				}
 				op.nx = true
 				continue
 			}
-			if i > 3 && v == "XX" {
+			if i > 2 && v == "XX" {
 				if op.nx {
 					return nil, errors.New("NX already set in this command")
 				}
 				op.xx = true
 				continue
 			}
-			if i > 3 && v == "GET" {
+			if i > 2 && v == "GET" {
 				op.get = true
 				continue
 			}
-			if i > 3 && v == "EX" {
+			if i > 2 && v == "EX" {
 				if op.exat != 0 {
 					return nil, errors.New("EXAT already set in this command")
 				}
 
-				if len(fields) > i {
+				if len(fields) <= i+1 {
 					return nil, errors.New("EX value missing")
 				}
 
@@ -62,16 +62,16 @@ func ParseCommandAny(command []byte) (any, error) {
 				if err != nil {
 					return nil, errors.New("unable to parse EX number")
 				}
-				op.ex = time.Now().UTC().Unix() + secs
+				op.ex = secs
 				cutoff = i
 				continue
 			}
-			if i > 3 && v == "EXAT" {
+			if i > 2 && v == "EXAT" {
 				if op.ex != 0 {
 					return nil, errors.New("EX already set in this command")
 				}
 
-				if len(fields) > i {
+				if len(fields) <= i+1 {
 					return nil, errors.New("EXAT value missing")
 				}
 
@@ -83,7 +83,7 @@ func ParseCommandAny(command []byte) (any, error) {
 				cutoff = i
 				continue
 			}
-			if i > 3 && v == "KEEPTTL" {
+			if i > 2 && v == "KEEPTTL" {
 				op.keepttl = true
 				continue
 			}
@@ -96,12 +96,114 @@ func ParseCommandAny(command []byte) (any, error) {
 		op.value = []byte(strings.TrimSpace(sb.String()))
 
 		return op, nil
+
+	// https://redis.io/commands/get/
 	case "GET":
 		if len(fields) < 2 {
-			return nil, errors.New("not enough arguments")
+			return nil, errors.New("not enough arguments for GET")
 		}
 
 		op := opGet{
+			key: fields[1],
+		}
+
+		return op, nil
+
+	// https://redis.io/commands/del/
+	case "DEL":
+		if len(fields) < 2 {
+			return nil, errors.New("not enough arguments for DEL")
+		}
+
+		op := opDel{
+			keys: fields[1:],
+		}
+
+		return op, nil
+
+	// https://redis.io/commands/exists/
+	case "EXISTS":
+		if len(fields) < 2 {
+			return nil, errors.New("not enough arguments for EXISTS")
+		}
+
+		op := opExists{
+			keys: fields[1:],
+		}
+
+		return op, nil
+
+	// https://redis.io/commands/expire/
+	case "EXPIRE":
+		// need at least key and value
+		if len(fields) < 3 {
+			return nil, errors.New("not enough arguments for EXPIRE")
+		}
+
+		var op opExpire
+
+		for i, v := range fields {
+			if i == 1 {
+				op.key = fields[1]
+
+				secs, err := strconv.ParseInt(fields[i+1], 10, 64)
+				if err != nil {
+					return nil, errors.New("unable to parse EXPIRE number")
+				}
+				op.ttl = secs
+				continue
+			}
+			if i > 2 && v == "NX" {
+				if op.xx || op.gt || op.lt {
+					return nil, errors.New("XX/GT/LT already set in this command")
+				}
+				op.nx = true
+				continue
+			}
+			if i > 2 && v == "XX" {
+				if op.nx {
+					return nil, errors.New("NX already set in this command")
+				}
+				op.xx = true
+				continue
+			}
+			if i > 2 && v == "GT" {
+				if op.nx {
+					return nil, errors.New("NX already set in this command")
+				}
+				op.gt = true
+				continue
+			}
+			if i > 2 && v == "LT" {
+				if op.nx {
+					return nil, errors.New("NX already set in this command")
+				}
+				op.lt = true
+				continue
+			}
+		}
+
+		return op, nil
+
+	// https://redis.io/commands/incr/
+	case "INCR":
+		if len(fields) < 2 {
+			return nil, errors.New("not enough arguments for INCR")
+		}
+
+		op := opIncr{
+			key: fields[1],
+		}
+
+		return op, nil
+
+	// https://redis.io/commands/decr/
+	case "DECR":
+		if len(fields) < 2 {
+			return nil, errors.New("not enough arguments for DECR")
+		}
+
+		op := opDecr{
 			key: fields[1],
 		}
 
