@@ -72,7 +72,7 @@ func TestParserAny(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -123,7 +123,7 @@ func TestParserAnyGet(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -196,7 +196,7 @@ func TestParserAnyErrors(t *testing.T) {
 	}
 
 	for _, tc := range tce {
-		_, err := ParseCommandAny([]byte(tc.input))
+		_, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			if err.Error() != tc.wantError.Error() {
 				t.Errorf("got: %s, want %s (input: %s)", err, tc.wantError, tc.input)
@@ -233,7 +233,7 @@ func TestParserAnyDel(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -278,7 +278,7 @@ func TestParserAnyExpire(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -339,7 +339,7 @@ func TestParserAnyExists(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -373,7 +373,7 @@ func TestParerAnyIncr(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -408,7 +408,7 @@ func TestParerAnyDecr(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		v, err := ParseCommandAny([]byte(tc.input))
+		v, err := ParseCommand([]byte(tc.input))
 		if err != nil {
 			t.Error(err)
 		}
@@ -419,95 +419,4 @@ func TestParerAnyDecr(t *testing.T) {
 			t.Errorf("got %v, want %v", op.key, tc.want.key)
 		}
 	}
-}
-
-func TestOperations(t *testing.T) {
-	type tc struct {
-		input string
-		want  operation
-	}
-
-	tcs := []tc{
-		{
-			input: "SET foo baz",
-			want: operation{
-				name:  "SET",
-				keys:  []string{"foo"},
-				value: "baz",
-			},
-		},
-		{
-			input: "SET foo 1",
-			want: operation{
-				name:  "SET",
-				keys:  []string{"foo"},
-				value: "1",
-			},
-		},
-		{
-			input: `SET foo "quoted string with spaces"`,
-			want: operation{
-				name:  "SET",
-				keys:  []string{"foo"},
-				value: `"quoted string with spaces"`,
-			},
-		},
-		{
-			input: "GET",
-			want: operation{
-				name:  "GET",
-				keys:  []string{""},
-				value: "",
-			},
-		},
-		{
-			input: "GET foo",
-			want: operation{
-				name:  "GET",
-				keys:  []string{"foo"},
-				value: "",
-			},
-		},
-		{
-			input: "DEL foo baz qax",
-			want: operation{
-				name:  "DEL",
-				keys:  []string{"foo", "baz", "qax"},
-				value: "",
-			},
-		},
-		{
-			input: "EXISTS foo baz quu",
-			want: operation{
-				name:  "EXISTS",
-				keys:  []string{"foo", "baz", "quu"},
-				value: "",
-			},
-		},
-		{
-			input: "EXPIRE foo 500",
-			want: operation{
-				name:  "EXPIRE",
-				keys:  []string{"foo"},
-				value: "500",
-			},
-		},
-	}
-
-	for _, v := range tcs {
-		op, err := ParseCommand([]byte(v.input))
-		if err != nil {
-			continue
-		}
-		if op.name != v.want.name {
-			t.Errorf("op name does not match, want: %s, got %s", v.want.name, op.name)
-		}
-		if slices.Compare(op.keys, v.want.keys) != 0 {
-			t.Errorf("op keys dont not match, want: %v, got %v", v.want.keys, op.keys)
-		}
-		if op.value != v.want.value {
-			t.Errorf("op value does not match, want: %v, got %v", v.want.value, op.value)
-		}
-	}
-
 }

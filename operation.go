@@ -1,18 +1,5 @@
 package cider
 
-type StoreKey string
-type StoreOperation string
-
-const (
-	OperationSet    = StoreOperation("SET")
-	OperationGet    = StoreOperation("GET")
-	OperationDel    = StoreOperation("DEL")
-	OperationExists = StoreOperation("EXISTS")
-	OperationExpire = StoreOperation("EXPIRE")
-	OperationIncr   = StoreOperation("INCR")
-	OperationDecr   = StoreOperation("DECR")
-)
-
 type opSet struct {
 	key   string
 	value []byte
@@ -53,19 +40,4 @@ type opIncr struct {
 
 type opDecr struct {
 	key string
-}
-
-type operation struct {
-	name  StoreOperation
-	keys  []string
-	value string
-}
-
-// Shorthand for returning an empty operation in case an error happens.
-func emptyOperation() operation {
-	return operation{
-		name:  "",
-		keys:  []string{},
-		value: "",
-	}
 }

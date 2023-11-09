@@ -6,7 +6,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -46,20 +45,16 @@ func (s *Session) HandleIn(store Storer) {
 			continue
 		}
 
-		switch op.name {
-		case OperationSet:
-			err := store.Set(s.ctx, op.keys[0], []byte(op.value), 0)
+		switch t := op.(type) {
+		case opSet:
+			err := store.Set(s.ctx, t.key, t.value, 0)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyOK()
-		case OperationGet:
-			if len(op.keys) == 0 {
-				s.out <- replyError(errors.New("value cannot be empty"))
-				continue
-			}
-			value, _, err := store.Get(s.ctx, op.keys[0])
+		case opGet:
+			value, _, err := store.Get(s.ctx, t.key)
 			if err != nil && err.Error() == "key not found" {
 				s.out <- replyNil()
 				continue
@@ -69,35 +64,30 @@ func (s *Session) HandleIn(store Storer) {
 				continue
 			}
 			s.out <- replyString(value)
-		case OperationDel:
-			num, err := store.Del(s.ctx, op.keys)
+		case opDel:
+			num, err := store.Del(s.ctx, t.keys)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyInteger(num)
-		case OperationExists:
-			num, err := store.Exists(s.ctx, op.keys)
+		case opExists:
+			num, err := store.Exists(s.ctx, t.keys)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyInteger(num)
-		case OperationExpire:
-			seconds, err := strconv.ParseInt(op.value, 10, 64)
-			if err != nil {
-				s.out <- replyError(err)
-				continue
-			}
-			res, err := store.Expire(s.ctx, op.keys[0], seconds)
+		case opExpire:
+			res, err := store.Expire(s.ctx, t.key, t.ttl)
 			if err != nil {
 				// todo: make error readable
 				s.out <- replyError(err)
 				continue
 			}
 			s.out <- replyInteger(res)
-		case OperationIncr:
-			err := store.Incr(s.ctx, op.keys[0])
+		case opIncr:
+			err := store.Incr(s.ctx, t.key)
 			if err != nil {
 				// todo: make error readable
 				s.out <- replyError(err)
@@ -105,8 +95,8 @@ func (s *Session) HandleIn(store Storer) {
 			}
 			s.out <- replyOK()
 			continue
-		case OperationDecr:
-			err := store.Decr(s.ctx, op.keys[0])
+		case opDecr:
+			err := store.Decr(s.ctx, t.key)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
