@@ -197,7 +197,7 @@ func (s *store) TTL(ctx context.Context, key string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if ttl == 0 {
+	if ttl <= 0 {
 		// The command returns -1 if the key exists but has no associated expire.
 		return -1, nil
 	}
