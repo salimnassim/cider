@@ -27,7 +27,7 @@ func TestSetGet(t *testing.T) {
 
 	test := []byte("value")
 
-	err := store.Set(ctx, "key", test, 0)
+	err := store.Set(ctx, "key", test, time.Now().Unix()+1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -105,7 +105,7 @@ func TestSetGetConcurrency(t *testing.T) {
 			value := values[r.Intn(len(values))]
 
 			if r.Int()%2 == 0 {
-				store.Set(ctx, key, []byte(value), 0)
+				store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 			} else {
 				store.Get(ctx, key)
 			}
@@ -122,7 +122,7 @@ func TestIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -149,7 +149,7 @@ func TestIncrIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -181,7 +181,7 @@ func TestDecr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,7 +207,7 @@ func TestTTL(t *testing.T) {
 
 	key := "test1"
 	value := "test"
-	now := time.Now().Unix()
+	now := time.Now().Unix() + 100
 
 	err := store.Set(ctx, key, []byte(value), now)
 	if err != nil {
