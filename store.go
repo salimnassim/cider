@@ -84,10 +84,10 @@ func NewItem(value []byte, ttl int64) *item {
 func (s *store) Get(ctx context.Context, key string) ([]byte, int64, error) {
 	s.mu.RLock()
 	item, ok := s.db[key]
+	s.mu.RUnlock()
 	if !ok {
 		return nil, 0, errors.New("key not found")
 	}
-	s.mu.RUnlock()
 
 	value, ttl := item.get()
 
