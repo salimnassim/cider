@@ -69,6 +69,11 @@ func (item *item) get() (value []byte, ttl int64) {
 }
 
 func NewItem(value []byte, ttl int64) *item {
+
+	if ttl == 0 {
+		ttl = -1
+	}
+
 	return &item{
 		mu:    &sync.RWMutex{},
 		value: value,
@@ -78,23 +83,28 @@ func NewItem(value []byte, ttl int64) *item {
 
 func (s *store) Get(ctx context.Context, key string) ([]byte, int64, error) {
 	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	item, ok := s.db[key]
+	s.mu.RUnlock()
 	if !ok {
 		return nil, 0, errors.New("key not found")
 	}
 
 	value, ttl := item.get()
 
+	if ttl != -1 && ttl <= time.Now().Unix() {
+		defer s.Del(ctx, []string{key})
+		return []byte{}, 0, errors.New("key not found")
+	}
+
 	return value, ttl, nil
 }
 
 func (s *store) Set(ctx context.Context, key string, value []byte, ttl int64) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	item := NewItem(value, ttl)
 
-	s.db[key] = NewItem(value, ttl)
+	s.mu.Lock()
+	s.db[key] = item
+	s.mu.Unlock()
 
 	return nil
 }
@@ -135,15 +145,15 @@ func (s *store) Expire(ctx context.Context, key string, seconds int64) (int64, e
 		return 0, err
 	}
 
-	go time.AfterFunc(time.Duration(seconds)*time.Second, func() {
-		s.Del(ctx, []string{key})
-	})
+	s.mu.RLock()
+	s.db[key].setTTL(time.Now().Unix() + seconds)
+	s.mu.RUnlock()
 
 	return 1, nil
 }
 
 func (s *store) Incr(ctx context.Context, key string) error {
-	val, _, err := s.Get(ctx, key)
+	val, ttl, err := s.Get(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -155,13 +165,13 @@ func (s *store) Incr(ctx context.Context, key string) error {
 	}
 
 	number = number + 1
-	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), 0)
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), ttl)
 
 	return nil
 }
 
 func (s *store) Decr(ctx context.Context, key string) error {
-	val, _, err := s.Get(ctx, key)
+	val, ttl, err := s.Get(ctx, key)
 	if err != nil {
 		return err
 	}
@@ -173,7 +183,7 @@ func (s *store) Decr(ctx context.Context, key string) error {
 	}
 
 	number = number - 1
-	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), 0)
+	s.Set(ctx, key, []byte(fmt.Sprintf("%d", number)), ttl)
 
 	return nil
 }
@@ -181,12 +191,14 @@ func (s *store) Decr(ctx context.Context, key string) error {
 func (s *store) TTL(ctx context.Context, key string) (int64, error) {
 	_, ttl, err := s.Get(ctx, key)
 	if err != nil && err.Error() == "key not found" {
+		// The command returns -2 if the key does not exist.
 		return -2, nil
 	}
 	if err != nil {
 		return 0, err
 	}
-	if ttl == 0 {
+	if ttl <= 0 {
+		// The command returns -1 if the key exists but has no associated expire.
 		return -1, nil
 	}
 	return ttl, nil

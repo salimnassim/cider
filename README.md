@@ -7,7 +7,7 @@ Experimental Redis clone written in Go that supports a limited subset of command
 
 Currently supports the following commands
 
-SET, GET, DEL, EXISTS, EXPIRE, INCR, DECR
+SET, GET, DEL, EXISTS, EXPIRE, INCR, DECR, TTL
 
 ### Store limitations
 

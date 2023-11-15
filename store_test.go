@@ -27,7 +27,7 @@ func TestSetGet(t *testing.T) {
 
 	test := []byte("value")
 
-	err := store.Set(ctx, "key", test, 0)
+	err := store.Set(ctx, "key", test, time.Now().Unix()+1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -40,6 +40,7 @@ func TestSetGet(t *testing.T) {
 	if !bytes.Equal(val, test) {
 		t.Errorf("bytes are not equal for %v and %v", val, test)
 	}
+
 }
 
 func TestSetDel(t *testing.T) {
@@ -60,6 +61,63 @@ func TestSetDel(t *testing.T) {
 	if deletes != 1 || ok {
 		t.Errorf("number of deletes should be 1 and not %v", deletes)
 	}
+}
+
+func TestExists(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	err := store.Set(ctx, "exists", []byte{0x01}, -1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	num, err := store.Exists(ctx, []string{"exists"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if num != 1 {
+		t.Errorf("got: %d, want: %d", num, 1)
+	}
+
+	num, err = store.Exists(ctx, []string{"noexists"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	if num != 0 {
+		t.Errorf("got: %d, want: %d", num, 0)
+	}
+}
+
+func TestExpire(t *testing.T) {
+	ctx := context.Background()
+	store := NewStore()
+
+	rep, err := store.Expire(ctx, "test", 100)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if rep != 0 {
+		t.Errorf("got: %d, want: %d", rep, 0)
+	}
+
+	err = store.Set(ctx, "test2", []byte{0x01}, -1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	rep, err = store.Expire(ctx, "test2", 5)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if rep != 1 {
+		t.Errorf("got: %d, want: %d", rep, 1)
+	}
+
 }
 
 func TestSetConcurrency(t *testing.T) {
@@ -105,7 +163,7 @@ func TestSetGetConcurrency(t *testing.T) {
 			value := values[r.Intn(len(values))]
 
 			if r.Int()%2 == 0 {
-				store.Set(ctx, key, []byte(value), 0)
+				store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 			} else {
 				store.Get(ctx, key)
 			}
@@ -122,7 +180,7 @@ func TestIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+1)
 	if err != nil {
 		t.Error(err)
 	}
@@ -149,7 +207,7 @@ func TestIncrIncr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -181,7 +239,7 @@ func TestDecr(t *testing.T) {
 	key := "test1"
 	value := "100"
 
-	err := store.Set(ctx, key, []byte(value), 0)
+	err := store.Set(ctx, key, []byte(value), time.Now().Unix()+100)
 	if err != nil {
 		t.Error(err)
 	}
@@ -207,7 +265,7 @@ func TestTTL(t *testing.T) {
 
 	key := "test1"
 	value := "test"
-	now := time.Now().Unix()
+	now := time.Now().Unix() + 100
 
 	err := store.Set(ctx, key, []byte(value), now)
 	if err != nil {
@@ -222,4 +280,28 @@ func TestTTL(t *testing.T) {
 	if ttl != now {
 		t.Errorf("want: %v, got %v", now, ttl)
 	}
+
+	ttl, err = store.TTL(ctx, "nokey")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ttl != -2 {
+		t.Errorf("want: %d, got %d", -2, ttl)
+	}
+
+	err = store.Set(ctx, "existsnoexpire", []byte{0x00}, -1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	ttl, err = store.TTL(ctx, "existsnoexpire")
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ttl != -1 {
+		t.Errorf("want: %d, got %d", -1, ttl)
+	}
+
 }

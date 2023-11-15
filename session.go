@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -47,7 +48,15 @@ func (s *Session) HandleIn(store Storer) {
 
 		switch t := op.(type) {
 		case opSet:
-			err := store.Set(s.ctx, t.key, t.value, 0)
+			// default ttl to none
+			ttl := int64(-1)
+			if t.ex != 0 {
+				ttl = time.Now().Unix() + t.ex
+			}
+			if t.exat != 0 {
+				ttl = t.exat
+			}
+			err := store.Set(s.ctx, t.key, t.value, ttl)
 			if err != nil {
 				s.out <- replyError(err)
 				continue
